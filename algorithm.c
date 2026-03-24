@@ -120,7 +120,13 @@ struct find_the_biggest_sqr(char **str, int a, int b)
 				biggest_sqr.y = y;
 				biggest_sqr.length = length;
 			}
-			
+			if (x + biggest_sqr.length >= a)
+				break ;
+		}
+		if (y + biggest_sqr_length >= b)
+			break ;
+	}
+return (biggest_sqr);
 }
 
 
