@@ -1,6 +1,19 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   validation.c                                       :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: vbuiko <vbuiko@student.42.fr>              +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/03/24 17:34:33 by vbuiko            #+#    #+#             */
+/*   Updated: 2026/03/24 18:34:53 by vbuiko           ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "validation.h"
+#include <stdlib.h>
 #include <fcntl.h>
-#include <stdio.h>
+#include <unistd.h>
 
 char	*buffer_append(char *content, int total, char *buf, int bytes)
 {
@@ -90,42 +103,45 @@ int	validate_characters(char a, char b, char c)
 	return (1);
 }
 
-int	parse_header(char *str, t_map *map, int *j)
+int	parse_header(t_map_structure *map_structure, int *j)
 {
    int	i;
 	int	number;
+	char *str;
 
+	str = map_structure->file_content;
 	i = 0;
 	while (str[i] && str[i] != '\n')
 		i++;
 	if (i < 4)
 		return (0);
-	number = parse_number_from_header(*str, i-3);
+	number = parse_number_from_header(str, i-3);
 	if (number <= 0)
 	 return (0);
-	map->rows = number;
-	validate_characters(str[i-3], str[i-2], str[i-1]);
-   if (!validate_characters)
+	map_structure->rows = number;
+   if (!validate_characters(str[i-3], str[i-2], str[i-1]))
 		return (0);
-	map->empty = str[i-3];
-   map->obstacle = str[i-2];
-   map->full = str[i-1];
+	map_structure->empty = str[i-3];
+   	map_structure->obstacle = str[i-2];
+   	map_structure->full = str[i-1];
    if (str[i] != '\n')
         return (0);
-   j = i + 1;
+   *j = i + 1;
    return (1);
 }
 
-int	check_line(char *str, int start, t_map *map, int *len)
+int	check_line(int start, t_map_structure *map_structure, int *len)
 {
     int	i;
     int	count;
+	 char *str;
 
 	 i = start;
 	 count = 0;
+	 str = map_structure->file_content;
     while (str[i] && str[i] != '\n')
     {
-        if (str[i] != map->empty && str[i] != map->obstacle)
+        if (str[i] != map_structure->empty && str[i] != map_structure->obstacle)
             return (-1);
         count++;
         i++;
@@ -139,37 +155,64 @@ int	check_line(char *str, int start, t_map *map, int *len)
     return (i + 1); 
 }
 
-int	parse_map(char *path)
+void	split_lines(char *str, char **arr)
 {
-	char	*content;
-	t_map	map;
+	int	i;
+	int	start;
+	int	j;
+
+	i = 0;
+	while (str[i] != '\n')
+		i++;
+	i++;
+	start = i;
+	j = 0;
+	while (str[i])
+	{
+		if (str[i] == '\n')
+		{
+			str[i] = '\0';
+			arr[j++] = str + start;
+			start = i + 1;
+		}
+		i++;
+	}
+	arr[j++] = str + start;
+}
+
+int	parse_map(char *path, t_map_structure *map_structure)
+{
 	int	i;
 	int	line_len;
-   int	lines;
-   int	next;
+	int	lines;
+	int	next;
 
 	i = 0;
 	line_len = -1;
 	lines = 0;
-	content = read_file(path);
-	if (!content)
+	map_structure->file_content = read_file(path);
+	if (!map_structure->file_content)
 		return (0);
-	if(!parse_header(content, &map, &i))
+	if(!parse_header(map_structure, &i))
 		return(0);
-	if (content[i] == '\0')
+	if (map_structure->file_content[i] == '\0')
 		return (0);
-	while (content[i])
+	while (map_structure->file_content[i])
     {
-        next = check_line(content, i, &map, &line_len);
+        next = check_line(i, map_structure, &line_len);
         if (next == -1)
             return (0);
         i = next;
         lines++;
     }
-    if (lines != map.rows)
+    if (lines != map_structure->rows)
         return (0);
     if (line_len <= 0)
         return (0);
-    map.columns = line_len;
+    map_structure->columns = line_len;
+	 map_structure->lines = malloc(sizeof(char*) * (lines));
+	 if (!map_structure->lines)
+	 	return (0);
+	 split_lines(map_structure->file_content, map_structure->lines);
     return (1);
 }
